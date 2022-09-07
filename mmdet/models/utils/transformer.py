@@ -441,7 +441,12 @@ class DetrTransformer(BaseModule):
 
 class DetrTransformerEncoder(BaseModule):
 
-    def __init__(self, layers_cfg=None, num_layers=None, init_cfg=None):
+    def __init__(self,
+                 layers_cfg=None,
+                 num_layers=None,
+                 post_norm_cfg=dict(type='LN'),
+                 init_cfg=None):
+
         super().__init__(init_cfg)
         if isinstance(layers_cfg, dict):
             layers_cfg = [copy.deepcopy(layers_cfg) for _ in range(num_layers)]
@@ -449,9 +454,12 @@ class DetrTransformerEncoder(BaseModule):
             assert isinstance(layers_cfg, list) and \
                    len(layers_cfg) == num_layers  # TODO
         self.layers_cfg = layers_cfg  # TODO
+        self.post_norm_cfg = post_norm_cfg
         self.num_layers = num_layers
         self._init_layers()
         self.embed_dims = self.layers[0].embed_dims  # TODO
+        self.post_norm = build_norm_layer(self.post_norm_cfg,
+                                          self.embed_dims)[1]
 
     def _init_layers(self):
         self.layers = ModuleList()
@@ -480,12 +488,19 @@ class DetrTransformerEncoder(BaseModule):
                 query_key_padding_mask=query_key_padding_mask,
                 key_padding_mask=key_padding_mask,
                 **kwargs)
+        if self.post_norm is not None:
+            query = self.post_norm(query)
         return query
 
 
 class DetrTransformerDecoder(BaseModule):
 
-    def __init__(self, layers_cfg=None, num_layers=None, init_cfg=None):
+    def __init__(self,
+                 layers_cfg=None,
+                 num_layers=None,
+                 post_norm_cfg=dict(type='LN'),
+                 return_intermediate=False,
+                 init_cfg=None):
         super().__init__(init_cfg)
         if isinstance(layers_cfg, dict):
             layers_cfg = [copy.deepcopy(layers_cfg) for _ in range(num_layers)]
@@ -494,8 +509,12 @@ class DetrTransformerDecoder(BaseModule):
                    len(layers_cfg) == num_layers  # TODO
         self.layers_cfg = layers_cfg  # TODO
         self.num_layers = num_layers
+        self.post_norm_cfg = post_norm_cfg
+        self.return_intermediate = return_intermediate
         self._init_layers()
         self.embed_dims = self.layers[0].embed_dims  # TODO
+        self.post_norm = build_norm_layer(self.post_norm_cfg,
+                                          self.embed_dims)[1]
 
     def _init_layers(self):
         self.layers = ModuleList()
@@ -525,8 +544,19 @@ class DetrTransformerDecoder(BaseModule):
                 query_key_padding_mask=query_key_padding_mask,
                 key_padding_mask=key_padding_mask,
                 **kwargs)
-            intermediate.append(query)
-        return torch.stack(intermediate)
+            if self.return_intermediate:
+                intermediate.append(query)
+
+        if self.post_norm is not None:
+            query = self.post_norm(query)
+            if self.return_intermediate:
+                intermediate.pop()
+                intermediate.append(query)
+
+        if self.return_intermediate:
+            return torch.stack(intermediate)
+
+        return query
 
 
 class DetrTransformerEncoderLayer(BaseModule):
