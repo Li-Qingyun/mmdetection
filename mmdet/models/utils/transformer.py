@@ -401,8 +401,8 @@ class DetrTransformer(BaseModule):
         self.embed_dims = self.encoder.embed_dims  # TODO
 
     def _init_layers(self):
-        self.encoder = DetrTransformerEncoder(**self.encoder)
-        self.decoder = DetrTransformerDecoder(**self.decoder)
+        self.encoder = DetrTransformerEncoder(**self.encoder_cfg)
+        self.decoder = DetrTransformerDecoder(**self.decoder_cfg)
 
     def init_weights(self):
         # follow the official DETR to init parameters
@@ -499,7 +499,7 @@ class DetrTransformerDecoder(BaseModule):
                  layers_cfg=None,
                  num_layers=None,
                  post_norm_cfg=dict(type='LN'),
-                 return_intermediate=False,
+                 return_intermediate=True,
                  init_cfg=None):
         super().__init__(init_cfg)
         if isinstance(layers_cfg, dict):
@@ -584,11 +584,11 @@ class DetrTransformerEncoderLayer(BaseModule):
         self.ffn_cfg = ffn_cfg  # TODO
         self.norm_cfg = norm_cfg  # TODO
         self._init_layers()
-        self.embed_dims = self.self_attn.embed_dims
 
     def _init_layers(self):
         self.self_attn = MultiheadAttention(**self.self_attn_cfg)
         self.self_attn.operation_name = 'self_attn'
+        self.embed_dims = self.self_attn.embed_dims  # TODO
         self.ffn = FFN(**self.ffn_cfg)
         norms_list = [
             build_norm_layer(self.norm_cfg, self.embed_dims)[1]
@@ -656,13 +656,13 @@ class DetrTransformerDecoderLayer(BaseModule):
         self.ffn_cfg = ffn_cfg
         self.norm_cfg = norm_cfg
         self._init_layers()
-        self.embed_dims = self.self_attn.embed_dims
 
     def _init_layers(self):
         self.self_attn = MultiheadAttention(**self.self_attn_cfg)
         self.self_attn.operation_name = 'self_attn'
         self.cross_attn = MultiheadAttention(**self.cross_attn_cfg)
         self.cross_attn.operation_name = 'cross_attn'
+        self.embed_dims = self.self_attn.embed_dims  # TODO
         self.ffn = FFN(**self.ffn_cfg)
         norms_list = [
             build_norm_layer(self.norm_cfg, self.embed_dims)[1]

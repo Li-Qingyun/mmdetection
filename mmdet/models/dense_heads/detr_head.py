@@ -2,14 +2,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import Conv2d, Linear, build_activation_layer
-from mmcv.cnn.bricks.transformer import FFN, build_positional_encoding
+from mmcv.cnn import Conv2d, Linear
+from mmcv.cnn.bricks.transformer import FFN
 from mmcv.runner import force_fp32
 
 from mmdet.core import (bbox_cxcywh_to_xyxy, bbox_xyxy_to_cxcywh,
                         build_assigner, build_sampler, multi_apply,
                         reduce_mean)
-from mmdet.models.utils import build_transformer
+from mmdet.models.utils import SinePositionalEncoding
+from mmdet.models.utils.transformer import DetrTransformer
 from ..builder import HEADS, build_loss
 from .anchor_free_head import AnchorFreeHead
 
@@ -28,11 +29,11 @@ class DETRHead(AnchorFreeHead):
         num_reg_fcs (int, optional): Number of fully-connected layers used in
             `FFN`, which is then used for the regression head. Default 2.
         transformer (obj:`mmcv.ConfigDict`|dict): Config for transformer.
-            Default: None.
+            Default: None.  # TODO
         sync_cls_avg_factor (bool): Whether to sync the avg_factor of
-            all ranks. Default to False.
+            all ranks. Default to False.  # TODO
         positional_encoding (obj:`mmcv.ConfigDict`|dict):
-            Config for position encoding.
+            Config for position encoding.  # TODO
         loss_cls (obj:`mmcv.ConfigDict`|dict): Config of the
             classification loss. Default `CrossEntropyLoss`.
         loss_bbox (obj:`mmcv.ConfigDict`|dict): Config of the
@@ -54,12 +55,9 @@ class DETRHead(AnchorFreeHead):
                  in_channels,
                  num_query=100,
                  num_reg_fcs=2,
-                 transformer=None,
+                 transformer_cfg=None,
+                 positional_encoding_cfg=dict(num_feats=128, normalize=True),
                  sync_cls_avg_factor=False,
-                 positional_encoding=dict(
-                     type='SinePositionalEncoding',
-                     num_feats=128,
-                     normalize=True),
                  loss_cls=dict(
                      type='CrossEntropyLoss',
                      bg_cls_weight=0.1,
@@ -126,34 +124,53 @@ class DETRHead(AnchorFreeHead):
             self.cls_out_channels = num_classes
         else:
             self.cls_out_channels = num_classes + 1
-        self.act_cfg = transformer.get('act_cfg',
-                                       dict(type='ReLU', inplace=True))
-        self.activate = build_activation_layer(self.act_cfg)
-        self.positional_encoding = build_positional_encoding(
-            positional_encoding)
-        self.transformer = build_transformer(transformer)
-        self.embed_dims = self.transformer.embed_dims
-        assert 'num_feats' in positional_encoding
-        num_feats = positional_encoding['num_feats']
-        assert num_feats * 2 == self.embed_dims, 'embed_dims should' \
-            f' be exactly 2 times of num_feats. Found {self.embed_dims}' \
-            f' and {num_feats}.'
+
+        self.transformer_cfg = transformer_cfg
+        self.positional_encoding_cfg = positional_encoding_cfg
         self._init_layers()
 
+        num_feats = self.positional_encoding.num_feats
+        assert num_feats * 2 == self.embed_dims, \
+            f'embed_dims should be exactly 2 times of num_feats. ' \
+            f'Found {self.embed_dims} and {num_feats}.'
+
     def _init_layers(self):
-        """Initialize layers of the transformer head."""
+        # Note: the build_activation_layer is deleted.
+        self._init_transformer()
+        self._init_decoder_queries()
+        self._init_predictor()
+        self._init_input_proj()
+
+    def _init_input_proj(self):
         self.input_proj = Conv2d(
             self.in_channels, self.embed_dims, kernel_size=1)
+
+    def _init_decoder_queries(self):
+        self.query_embedding = nn.Embedding(self.num_query, self.embed_dims)
+
+    def _init_transformer(self):
+        self.positional_encoding = SinePositionalEncoding(
+            **self.positional_encoding_cfg)
+        self.transformer = DetrTransformer(**self.transformer_cfg)
+        self.embed_dims = self.transformer.embed_dims  # TODO
+
+    def _init_predictor(self):
+        """Initialize layers of the transformer head."""
+        # cls branch
         self.fc_cls = Linear(self.embed_dims, self.cls_out_channels)
+        # reg branch
+        self.activate = nn.ReLU
         self.reg_ffn = FFN(
             self.embed_dims,
             self.embed_dims,
             self.num_reg_fcs,
-            self.act_cfg,
+            dict(type='ReLU', inplace=True),
             dropout=0.0,
             add_residual=False)
+        # NOTE the activations of reg_branch is the same as those in
+        # transformer, but they are actually different in Conditional DETR
+        # and DAB DETR (prelu in transformer and relu in reg_branch)
         self.fc_reg = Linear(self.embed_dims, 4)
-        self.query_embedding = nn.Embedding(self.num_query, self.embed_dims)
 
     def init_weights(self):
         """Initialize weights of the transformer head."""

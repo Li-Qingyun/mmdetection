@@ -17,41 +17,29 @@ model = dict(
         type='DETRHead',
         num_classes=80,
         in_channels=2048,
-        transformer=dict(
-            type='Transformer',
-            encoder=dict(
-                type='DetrTransformerEncoder',
+        transformer_cfg=dict(
+            encoder_cfg=dict(
                 num_layers=6,
-                transformerlayers=dict(
-                    type='BaseTransformerLayer',
-                    attn_cfgs=[
-                        dict(
-                            type='MultiheadAttention',
-                            embed_dims=256,
-                            num_heads=8,
-                            dropout=0.1)
-                    ],
-                    feedforward_channels=2048,
-                    ffn_dropout=0.1,
-                    operation_order=('self_attn', 'norm', 'ffn', 'norm'))),
-            decoder=dict(
-                type='DetrTransformerDecoder',
+                layers_cfg=dict(
+                    self_attn_cfg=dict(
+                        embed_dims=256, num_heads=8, dropout=0.1),
+                    ffn_cfg=dict(
+                        embed_dims=256,
+                        feedforward_channels=2048,
+                        ffn_drop=0.1))),
+            decoder_cfg=dict(
                 return_intermediate=True,
                 num_layers=6,
-                transformerlayers=dict(
-                    type='DetrTransformerDecoderLayer',
-                    attn_cfgs=dict(
-                        type='MultiheadAttention',
+                layers_cfg=dict(
+                    self_attn_cfg=dict(
+                        embed_dims=256, num_heads=8, dropout=0.1),
+                    cross_attn_cfg=dict(
+                        embed_dims=256, num_heads=8, dropout=0.1),
+                    ffn_cfg=dict(
                         embed_dims=256,
-                        num_heads=8,
-                        dropout=0.1),
-                    feedforward_channels=2048,
-                    ffn_dropout=0.1,
-                    operation_order=('self_attn', 'norm', 'cross_attn', 'norm',
-                                     'ffn', 'norm')),
-            )),
-        positional_encoding=dict(
-            type='SinePositionalEncoding', num_feats=128, normalize=True),
+                        feedforward_channels=2048,
+                        ffn_drop=0.1)))),
+        positional_encoding_cfg=dict(num_feats=128, normalize=True),
         loss_cls=dict(
             type='CrossEntropyLoss',
             bg_cls_weight=0.1,
