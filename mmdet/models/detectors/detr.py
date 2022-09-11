@@ -125,6 +125,6 @@ class DETR(TransformerDetector):
         if return_memory:
             # TODO: The original output is 'out_dec, memory', I kept it here.
             memory = memory.permute(1, 2, 0).reshape(bs, c, h, w)
-            return InstanceData(outs_trans=out_dec, memory=memory)
-        return InstanceData(outs_trans=out_dec)
+            return InstanceData(outs_trans=tuple([out_dec]), memory=tuple([memory]))
+        return InstanceData(outs_trans=tuple([out_dec]))
         # TODO: For keeping the multi_apply in DETRHead.forward
