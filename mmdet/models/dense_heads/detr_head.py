@@ -144,7 +144,7 @@ class DETRHead(AnchorFreeHead):
         """
         return multi_apply(self.forward_single, x)
 
-    def forward_single(self, outs_dec: Tensor) -> Tuple[Tensor, Tensor]:
+    def forward_single(self, outs_dec: InstanceData) -> Tuple[Tensor, Tensor]:
         """"Forward function for a single feature level.
 
         Args: TODO
@@ -159,9 +159,9 @@ class DETRHead(AnchorFreeHead):
             head with normalized coordinate format (cx, cy, w, h). \
             Shape [nb_dec, bs, num_query, 4].
         """
-        all_cls_scores = self.fc_cls(outs_dec)
+        all_cls_scores = self.fc_cls(outs_dec.outs_trans)
         all_bbox_preds = self.fc_reg(self.activate(
-            self.reg_ffn(outs_dec))).sigmoid()
+            self.reg_ffn(outs_dec.outs_trans))).sigmoid()
         return all_cls_scores, all_bbox_preds
 
     def loss_by_feat(

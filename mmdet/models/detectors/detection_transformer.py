@@ -67,9 +67,9 @@ class TransformerDetector(BaseDetector):
              batch_data_samples: SampleList) -> Union[dict, list]:
         img_feats = self.extract_feat(batch_inputs)
         seq_feats = self.forward_pretransformer(img_feats, batch_data_samples)
-        outs_dec = self.forward_transformer(
+        outs_trans = self.forward_transformer(
             **seq_feats, query_embed=self.query_embedding.weight)
-        losses = self.bbox_head.loss(outs_dec, batch_data_samples)
+        losses = self.bbox_head.loss(outs_trans, batch_data_samples)
         return losses
 
     def predict(self,
@@ -78,10 +78,10 @@ class TransformerDetector(BaseDetector):
                 rescale: bool = True) -> SampleList:
         img_feats = self.extract_feat(batch_inputs)
         seq_feats = self.forward_pretransformer(img_feats, batch_data_samples)
-        outs_dec = self.forward_transformer(
+        outs_trans = self.forward_transformer(
             **seq_feats, query_embed=self.query_embedding.weight)
         results_list = self.bbox_head.predict(
-            outs_dec, batch_data_samples, rescale=rescale)
+            outs_trans, batch_data_samples, rescale=rescale)
         batch_data_samples = self.add_pred_to_datasample(
             batch_data_samples, results_list)
         return batch_data_samples
@@ -92,9 +92,9 @@ class TransformerDetector(BaseDetector):
             batch_data_samples: OptSampleList = None) -> Tuple[List[Tensor]]:
         img_feats = self.extract_feat(batch_inputs)
         seq_feats = self.forward_pretransformer(img_feats, batch_data_samples)
-        outs_dec = self.forward_transformer(
+        outs_trans = self.forward_transformer(
             **seq_feats, query_embed=self.query_embedding.weight)
-        results = self.bbox_head.forward(outs_dec)
+        results = self.bbox_head.forward(outs_trans)
         return results
 
     def extract_feat(self, batch_inputs: Tensor) -> Tuple[Tensor]:

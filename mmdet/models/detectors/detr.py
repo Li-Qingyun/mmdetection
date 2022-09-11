@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from mmcv.cnn import Conv2d
 from mmengine.model import xavier_init
+from mmengine.structures import InstanceData
 from torch import Tensor, nn
 
 from mmdet.registry import MODELS
@@ -124,6 +125,6 @@ class DETR(TransformerDetector):
         if return_memory:
             # TODO: The original output is 'out_dec, memory', I kept it here.
             memory = memory.permute(1, 2, 0).reshape(bs, c, h, w)
-            return tuple([out_dec]), tuple([memory])
-        return tuple([out_dec])
+            return InstanceData(outs_trans=out_dec, memory=memory)
+        return InstanceData(outs_trans=out_dec)
         # TODO: For keeping the multi_apply in DETRHead.forward
