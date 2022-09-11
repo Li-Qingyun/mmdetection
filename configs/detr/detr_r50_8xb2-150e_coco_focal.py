@@ -119,7 +119,7 @@ train_cfg = dict(
     type='EpochBasedTrainLoop', max_epochs=max_epochs, val_interval=1)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
-randomness = dict(seed=42,deterministic=True)
+randomness = dict(seed=42, deterministic=True)
 param_scheduler = [
     dict(
         type='MultiStepLR',
