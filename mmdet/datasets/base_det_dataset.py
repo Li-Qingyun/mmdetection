@@ -24,10 +24,12 @@ class BaseDetDataset(BaseDataset):
                  *args,
                  proposal_file: Optional[str] = None,
                  file_client_args: dict = dict(backend='disk'),
+                 continuous_categories = True,
                  **kwargs) -> None:
         self.proposal_file = proposal_file
         self.file_client_args = file_client_args
         self.file_client = FileClient(**file_client_args)
+        self.continuous_categories = continuous_categories
         super().__init__(*args, **kwargs)
 
     def full_init(self) -> None:

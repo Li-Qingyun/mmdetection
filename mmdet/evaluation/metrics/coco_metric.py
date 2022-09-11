@@ -66,6 +66,7 @@ class CocoMetric(BaseMetric):
                  ann_file: Optional[str] = None,
                  metric: Union[str, List[str]] = 'bbox',
                  classwise: bool = False,
+                 continuous_categories: bool = True,
                  proposal_nums: Sequence[int] = (100, 300, 1000),
                  iou_thrs: Optional[Union[float, Sequence[float]]] = None,
                  metric_items: Optional[Sequence[str]] = None,
@@ -89,6 +90,9 @@ class CocoMetric(BaseMetric):
 
         # proposal_nums used to compute recall or precision.
         self.proposal_nums = list(proposal_nums)
+
+        # support class91 metric
+        self.continuous_categories = continuous_categories
 
         # iou_thrs used to compute recall or precision.
         if iou_thrs is None:
@@ -213,7 +217,10 @@ class CocoMetric(BaseMetric):
                 data['image_id'] = image_id
                 data['bbox'] = self.xyxy2xywh(bboxes[i])
                 data['score'] = float(scores[i])
-                data['category_id'] = self.cat_ids[label]
+                if self.continuous_categories:
+                    data['category_id'] = self.cat_ids[label]
+                else:
+                    data['category_id'] = label
                 bbox_json_results.append(data)
 
             if segm_json_results is None:
