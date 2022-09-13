@@ -62,7 +62,7 @@ class DETRHead(AnchorFreeHead):
         self.bg_cls_weight = 0
         self.sync_cls_avg_factor = sync_cls_avg_factor
         class_weight = loss_cls.get('class_weight', None)
-        if class_weight is not None and (self.__class__ is DETRHead):
+        if class_weight is not None: #and (self.__class__ is DETRHead):
             assert isinstance(class_weight, float), 'Expected ' \
                 'class_weight to have type float. Found ' \
                 f'{type(class_weight)}.'
@@ -123,7 +123,7 @@ class DETRHead(AnchorFreeHead):
 
     # def _load_from_state_dict  # TODO
 
-    def forward(self, x: Tuple[Tensor]) -> Tuple[List[Tensor], List[Tensor]]:
+    def forward(self, x: InstanceData) -> Tuple[List[Tensor], List[Tensor]]:
         """Forward function.
 
         Args:
@@ -159,9 +159,11 @@ class DETRHead(AnchorFreeHead):
             head with normalized coordinate format (cx, cy, w, h). \
             Shape [nb_dec, bs, num_query, 4].
         """
-        all_cls_scores = self.fc_cls(outs_dec.outs_trans)
+        all_cls_scores = self.fc_cls(outs_dec.outs_trans[0])
         all_bbox_preds = self.fc_reg(self.activate(
-            self.reg_ffn(outs_dec.outs_trans))).sigmoid()
+            self.reg_ffn(outs_dec.outs_trans[0]))).sigmoid()
+        k1 = all_cls_scores.sum()
+        k2 = all_bbox_preds.sum()
         return all_cls_scores, all_bbox_preds
 
     def loss_by_feat(
