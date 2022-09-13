@@ -103,7 +103,11 @@ train_pipeline = [
                     ]]),
     dict(type='PackDetInputs')
 ]
-train_dataloader = dict(dataset=dict(pipeline=train_pipeline, continuous_categories=False))
+
+# if categories is 80, set class80=True; if categories is 91, set calss80=80
+class80 = False
+
+train_dataloader = dict(dataset=dict(pipeline=train_pipeline, class80=class80))
 
 # optimizer
 optim_wrapper = dict(
@@ -130,7 +134,7 @@ param_scheduler = [
         gamma=0.1)
 ]
 
-val_evaluator = dict(continuous_categories=False)
+val_evaluator = dict(continuous_categories=class80)
 test_evaluator = val_evaluator
 
 # NOTE: `auto_scale_lr` is for automatically scaling LR,

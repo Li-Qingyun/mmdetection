@@ -19,6 +19,7 @@ model = dict(
         norm_eval=True,
         style='pytorch',
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
+    num_query=300,
     encoder_cfg=dict(
         num_layers=6,
         layer_cfg=dict(
